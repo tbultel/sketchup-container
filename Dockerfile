@@ -1,36 +1,80 @@
-FROM registry.fedoraproject.org/fedora:28
-RUN dnf install -y wine winetricks file xorg-x11-server-Xvfb p7zip mesa-dri-drivers cups-pdf uid_wrapper && dnf clean all
+FROM ubuntu:18.04
+
+
+RUN apt-get update
+RUN apt-get install -y software-properties-common wget
+
+RUN dpkg --add-architecture i386
+RUN wget -nc https://dl.winehq.org/wine-builds/winehq.key
+RUN apt-key add winehq.key
+RUN apt-add-repository 'deb https://dl.winehq.org/wine-builds/ubuntu/ bionic main'
+RUN apt-get update
+
+RUN apt-get install -y file p7zip libuid-wrapper xterm winbind
+
+RUN apt install -y --install-recommends winehq-devel
+RUN apt install -y winetricks
+
+RUN apt install zip
+
 ARG gid=1000
 RUN groupadd -g $gid user
 ARG uid=1000
 RUN useradd -u $uid -g user user
 RUN mkdir /data && chown user /data
-
-RUN chmod a+rx /usr/lib/cups/backend/cups-pdf
-RUN mv /usr/lib/cups/backend/cups-pdf /usr/lib/cups/backend/cups-pdf.orig && chmod a+rx /usr/lib/cups/backend/cups-pdf.orig
-COPY cups-pdf-wrapper /usr/lib/cups/backend/cups-pdf
-COPY cups-files.conf cups-pdf.conf printers.conf /etc/cups/
-RUN chgrp -R user /etc/cups && chmod g+r /etc/cups/*
-RUN sed -i -e 's%^LogLevel.*%LogLevel debug%' -e 's%^Listen localhost%# &%' -e 's%^Listen /.*%Listen /tmp/cups/cupsd.sock%' /etc/cups/cupsd.conf
+RUN mkdir -p /home/user && chown -R user:user /home/user
 
 USER user
 ENV WINEARCH=win64
-RUN xvfb-run winetricks -q vcrun2017
+ENV DISPLAY=:0
+RUN winetricks -q vcrun2013 vcrun2015 
+RUN winetricks -q corefonts
+RUN winetricks -q dotnet452
+
+# re-set win7 now
 RUN winetricks -q win7
+
+RUN ls
 WORKDIR /home/user
-COPY sketchupmake-2017-2-2555-90782-en-x64.exe /home/user/
-RUN echo '9841792f170d803ae95a2741c44cce38e618660f98a1a3816335e9bf1b45a337  sketchupmake-2017-2-2555-90782-en-x64.exe' | sha256sum -c
-RUN 7za x sketchupmake-2017-2-2555-90782-en-x64.exe SketchUp2017-x64.msi && wine64 msiexec /i SketchUp2017-x64.msi /quiet && rm -f SketchUp2017-x64.msi
-RUN ls -la ".wine/drive_c/Program Files/SketchUp/SketchUp 2017/SketchUp.exe"
-RUN sed -i 's/"LogPixels"=dword:.*/"LogPixels"=dword:00000080/' .wine/system.reg
+
+ENV WINEPREFIX=/home/user/.wine
+
+ARG sketchup_exe=sketchupmake-2017-2-2555-90782-en-x64-exe
+
+
+RUN cd /home/user && wget https://github.com/tbultel/sketchup-stl/archive/master.zip
+RUN unzip /home/user/master.zip
+
+RUN cd sketchup-stl-master/src && zip -r /home/user/.wine/drive_c/users/user/Desktop/sketchup-stl.rbz sketchup-stl sketchup-stl.rb
+RUN rm -rf /home/user/master.zip sketchup-stl-master
+
+# Download Sketchup
+
+RUN cd /home/user && wget https://www.sketchup.com/sketchup/2017/en/$sketchup_exe
+# We extract the installer, because autoextracting .exe spawns uncontrolable processes
+
+RUN rm -rf Make
+RUN mkdir -p Make
+RUN cd Make && 7zr x ../$sketchup_exe
+RUN cd Make/SketchUpPrerequisites && wine64 start /wait /unix InstallPrerequisites.exe
+RUN cd Make && wine64 start /wait /unix vcredist_x64/vcredist_x64.exe
+RUN cd Make && wine64 start /wait /unix SketchUp2017-x64.msi
+
+RUN rm -rf Make $sketchup_exe
+
+ARG CACHEBUST=1
 
 COPY wine-tmp-list wine-data-list /
 RUN mkdir .tmp-template
 RUN while read i ; do mkdir -p "$( dirname .tmp-template/"$i" )" && ( test -e .wine/"$i" || mkdir -p .wine/"$i" ) && mv .wine/"$i" .tmp-template/"$i" && ln -sv /tmp/wine/"$i" .wine/"$i" ; done < /wine-tmp-list
 RUN while read i ; do mkdir -p "$( dirname .wine-template/"$i" )" && ( test -e .wine/"$i" || mkdir -p .wine/"$i" ) && mv .wine/"$i" .wine-template/"$i" && ln -sv /data/.sketchup-run/wine/"$i" .wine/"$i" ; done < /wine-data-list
-ENV WINEPREFIX=/home/user/.wine
+
 COPY run-sketchup /usr/local/bin/
+COPY run-xterm /usr/local/bin/
+
 RUN rm -f /home/user/.wine/drive_c/users/user/"My Documents" && ln -sv /data /home/user/.wine/drive_c/users/user/"My Documents"
 
 ENTRYPOINT [ "/usr/local/bin/run-sketchup" ]
-LABEL RUN 'docker run --read-only --tmpfs /tmp -v /tmp/.wine-$(id -u) -e DISPLAY=$DISPLAY --security-opt=label:type:spc_t --user=$(id -u):$(id -g) -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 --device=/dev/dri/card0:/dev/dri/card0 -v $(pwd):/data --rm sketchup'
+#ENTRYPOINT [ "/usr/local/bin/run-xterm" ]
+
+LABEL RUN 'docker run --read-only --network=host --tmpfs /tmp -v /tmp/.wine-$(id -u) -e DISPLAY=$DISPLAY --security-opt=label:type:spc_t --user=$(id -u):$(id -g) -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 -v $HOME:/data --rm sketchup'

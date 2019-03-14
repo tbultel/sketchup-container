@@ -11,37 +11,41 @@ purpose.
 This repository helps me to run SketchUp Make 2017 from container
 image, installed separately from by workstation packages.
 
+The original version of this container was based on Fedora,
+but latest wine version for Ubuntu give better results, and less 
+installation steps
+
 Build image
 -----------
 
 This repository does not distribute the actual SketchUp Make binary.
-Download the Windows version from
+It will be downloaded at the time the container is built.
 
-	https://www.sketchup.com/download/make
-
-and place it to this directory.
-
-Then run
-
-	sudo docker build --build-arg=uid=$(id -u) -t sketchup .
+	xhost +
+	docker build --network=host --build-arg=uid=$(id -u) -t sketchup .
 
 Run the container
 -----------------
 
 The container image expects the directory with .skp files bind-mounted
 to /data directory in the container. This is an example command to
-run the container, mounting the current directory:
+run the container, mounting the user home directory:
 
-	sudo docker run --read-only \
+	docker run \
+		--read-only \
+		--network=host \
 		--tmpfs /tmp -v /tmp/.wine-$(id -u) \
 		-e DISPLAY=$DISPLAY \
 		--security-opt=label:type:spc_t --user=$(id -u):$(id -g) \
 		-v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 \
-		--device=/dev/dri/card0:/dev/dri/card0 \
-		-v $(pwd):/data --rm sketchup
+		-v $HOME:/data --rm sketchup
 
-SketchUp and Wine will store some config and state information in
-subdirectory .sketchup-run/ of the directory mounted to /data,
-creating that subdirectory upon the first run if needed. It should be
-safe to remove that subdirectory.
+Installing the STL extension
+-----------------
 
+The container comes with slightly modified STL extension to Sketchup.
+Namely the STL export does not work with wine, and I had to cheat a little bit.
+
+It is not installed automagically, but the extension package *sketchup-stl.rbz*
+is present on the Desktop directory of the wine user, making it straightforward
+to install in Sketchup through the Extension Manager

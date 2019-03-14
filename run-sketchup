@@ -8,17 +8,11 @@ if ! [ -d /data/.sketchup-run ] ; then
 	( cd /home/user/.local && cp -rp . /data/.sketchup-run/.local/ )
 	( cd /home/user/.wine-template && cp -rp . /data/.sketchup-run/wine )
 fi
-mkdir /tmp/wine
+mkdir -p /tmp/wine
 ( cd /home/user/.tmp-template && cp -rp . /tmp/wine )
 
 export HOME=/data/.sketchup-run
 cd /data
 
-if [ "$1" == 'winecfg' ] ; then
-	exec winecfg "$@"
-else
-	mkdir -p /tmp/cups/{log,cache,spool,pdf-spool,tmp}
-	/usr/sbin/cupsd -C /etc/cups/cupsd.conf -s /etc/cups/cups-files.conf &
-	export CUPS_SERVER=/tmp/cups/cupsd.sock
-	exec wine64 $WINEPREFIX/"drive_c/Program Files/SketchUp/SketchUp 2017/SketchUp.exe" "$@"
-fi
+exec wine64 $WINEPREFIX/"drive_c/Program Files/SketchUp/SketchUp 2017/SketchUp.exe" "$@"
+
