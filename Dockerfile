@@ -2,7 +2,14 @@ FROM ubuntu:18.04
 
 
 RUN apt-get update
-RUN apt-get install -y software-properties-common wget
+RUN apt install -y software-properties-common
+RUN apt install -y wget
+RUN apt install -y file
+RUN apt install -y p7zip
+RUN apt install -y libuid-wrapper
+RUN apt install -y file
+RUN apt install -y winbind
+RUN apt install -y xterm
 
 RUN dpkg --add-architecture i386
 RUN wget -nc https://dl.winehq.org/wine-builds/winehq.key
@@ -10,9 +17,8 @@ RUN apt-key add winehq.key
 RUN apt-add-repository 'deb https://dl.winehq.org/wine-builds/ubuntu/ bionic main'
 RUN apt-get update
 
-RUN apt-get install -y file p7zip libuid-wrapper xterm winbind
 
-RUN apt install -y --install-recommends winehq-devel
+RUN apt install -y --install-recommends winehq-stable
 RUN apt install -y winetricks
 
 RUN apt install zip
