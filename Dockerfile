@@ -1,7 +1,7 @@
 FROM ubuntu:18.04
 
 
-RUN apt-get update
+RUN apt update
 RUN apt install -y software-properties-common
 RUN apt install -y wget
 RUN apt install -y file
