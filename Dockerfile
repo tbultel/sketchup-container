@@ -21,7 +21,7 @@ RUN apt-get update
 RUN apt install -y --install-recommends winehq-stable
 RUN apt install -y winetricks
 
-RUN apt install zip
+RUN apt install -y zip
 
 ARG gid=1000
 RUN groupadd -g $gid user
