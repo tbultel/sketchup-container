@@ -1,5 +1,9 @@
 FROM ubuntu:18.04
 
+LABEL BUILD 'docker build --network=host --build-arg=uid=$(id -u) -t sketchup .'
+LABEL RUN 'docker run --read-only --network=host --tmpfs /tmp -v /tmp/.wine-$(id -u) -e DISPLAY=$DISPLAY --security-opt=label:type:spc_t --user=$(id -u):$(id -g) -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 -v $HOME:/data --rm sketchup'
+
+
 
 RUN apt update
 RUN apt install -y software-properties-common
@@ -82,5 +86,3 @@ RUN rm -f /home/user/.wine/drive_c/users/user/"My Documents" && ln -sv /data /ho
 
 ENTRYPOINT [ "/usr/local/bin/run-sketchup" ]
 #ENTRYPOINT [ "/usr/local/bin/run-xterm" ]
-
-LABEL RUN 'docker run --read-only --network=host --tmpfs /tmp -v /tmp/.wine-$(id -u) -e DISPLAY=$DISPLAY --security-opt=label:type:spc_t --user=$(id -u):$(id -g) -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 -v $HOME:/data --rm sketchup'
