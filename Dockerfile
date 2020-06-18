@@ -1,5 +1,9 @@
 FROM ubuntu:18.04
 
+LABEL BUILD 'docker build --network=host --build-arg=uid=$(id -u) -t sketchup .'
+LABEL RUN 'docker run --read-only --network=host --tmpfs /tmp -v /tmp/.wine-$(id -u) -e DISPLAY=$DISPLAY --security-opt=label:type:spc_t --user=$(id -u):$(id -g) -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 -v $HOME:/data --rm sketchup'
+
+
 
 RUN apt update
 RUN apt install -y software-properties-common
@@ -15,13 +19,19 @@ RUN dpkg --add-architecture i386
 RUN wget -nc https://dl.winehq.org/wine-builds/winehq.key
 RUN apt-key add winehq.key
 RUN apt-add-repository 'deb https://dl.winehq.org/wine-builds/ubuntu/ bionic main'
+
+# https://nixytrix.com/error-winehq-stable-depends-wine-stable-5-0-0-bionic/
+RUN wget -nv 'https://download.opensuse.org/repositories/Emulators:/Wine:/Debian/xUbuntu_18.04/Release.key'
+RUN apt-key add Release.key
+RUN apt-add-repository 'deb https://download.opensuse.org/repositories/Emulators:/Wine:/Debian/xUbuntu_18.04/ ./'
+
 RUN apt-get update
 
 
 RUN apt install -y --install-recommends winehq-stable
 RUN apt install -y winetricks
 
-RUN apt install zip
+RUN apt install -y zip
 
 ARG gid=1000
 RUN groupadd -g $gid user
@@ -82,5 +92,3 @@ RUN rm -f /home/user/.wine/drive_c/users/user/"My Documents" && ln -sv /data /ho
 
 ENTRYPOINT [ "/usr/local/bin/run-sketchup" ]
 #ENTRYPOINT [ "/usr/local/bin/run-xterm" ]
-
-LABEL RUN 'docker run --read-only --network=host --tmpfs /tmp -v /tmp/.wine-$(id -u) -e DISPLAY=$DISPLAY --security-opt=label:type:spc_t --user=$(id -u):$(id -g) -v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 -v $HOME:/data --rm sketchup'
