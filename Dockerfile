@@ -19,6 +19,12 @@ RUN dpkg --add-architecture i386
 RUN wget -nc https://dl.winehq.org/wine-builds/winehq.key
 RUN apt-key add winehq.key
 RUN apt-add-repository 'deb https://dl.winehq.org/wine-builds/ubuntu/ bionic main'
+
+# https://nixytrix.com/error-winehq-stable-depends-wine-stable-5-0-0-bionic/
+RUN wget -nv 'https://download.opensuse.org/repositories/Emulators:/Wine:/Debian/xUbuntu_18.04/Release.key'
+RUN apt-key add Release.key
+RUN apt-add-repository 'deb https://download.opensuse.org/repositories/Emulators:/Wine:/Debian/xUbuntu_18.04/ ./'
+
 RUN apt-get update
 
 
